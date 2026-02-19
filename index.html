@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⏳ TRAC Time Machine</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #020208;
+    --deep: #06060f;
+    --panel: #0a0a1a;
+    --border: #1a1a3a;
+    --glow-cyan: #00ffe0;
+    --glow-purple: #bf00ff;
+    --glow-gold: #ffd700;
+    --text: #c8d8e8;
+    --text-dim: #4a5a7a;
+    --green: #00ff88;
+    --red: #ff3366;
+    --amber: #ffaa00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,224,0.015) 2px,
+      rgba(0,255,224,0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.85) 100%);
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  /* Animated background grid */
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,224,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,224,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridScroll 20s linear infinite;
+    z-index: 0;
+  }
+
+  @keyframes gridScroll {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+
+  .container {
+    position: relative;
+    z-index: 10;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+
+  .logo-ring {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    position: relative;
+    animation: rotateSlow 10s linear infinite;
+  }
+
+  .logo-ring svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 12px var(--glow-cyan));
+  }
+
+  @keyframes rotateSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.6rem, 5vw, 2.8rem);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, var(--glow-cyan), var(--glow-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(0,255,224,0.4));
+    animation: titlePulse 4s ease-in-out infinite;
+  }
+
+  @keyframes titlePulse {
+    0%, 100% { filter: drop-shadow(0 0 20px rgba(0,255,224,0.4)); }
+    50% { filter: drop-shadow(0 0 35px rgba(191,0,255,0.6)); }
+  }
+
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    letter-spacing: 0.25em;
+    margin-top: 8px;
+    text-transform: uppercase;
+  }
+
+  /* TERMINAL PANEL */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 28px;
+    margin-bottom: 24px;
+    position: relative;
+    box-shadow: 
+      0 0 0 1px rgba(0,255,224,0.05),
+      inset 0 0 40px rgba(0,255,224,0.02),
+      0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  .panel::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--glow-cyan);
+    background: var(--panel);
+    padding: 0 8px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* INPUT SECTION */
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .input-group {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--glow-cyan);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  input, select {
+    width: 100%;
+    background: rgba(0,255,224,0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s;
+    appearance: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--glow-cyan);
+    box-shadow: 0 0 15px rgba(0,255,224,0.15), inset 0 0 10px rgba(0,255,224,0.05);
+    background: rgba(0,255,224,0.07);
+  }
+
+  input::placeholder { color: var(--text-dim); }
+
+  select option { background: var(--panel); }
+
+  /* TIME SLIDER */
+  .time-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+
+  .time-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 10px 8px;
+    background: rgba(0,255,224,0.04);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    user-select: none;
+  }
+
+  .time-btn:hover {
+    border-color: var(--glow-cyan);
+    color: var(--glow-cyan);
+    background: rgba(0,255,224,0.08);
+  }
+
+  .time-btn.active {
+    border-color: var(--glow-cyan);
+    color: var(--black);
+    background: var(--glow-cyan);
+    box-shadow: 0 0 20px rgba(0,255,224,0.4);
+    font-weight: 700;
+  }
+
+  /* LAUNCH BUTTON */
+  .btn-launch {
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px;
+    background: transparent;
+    border: 2px solid var(--glow-cyan);
+    border-radius: 3px;
+    color: var(--glow-cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .btn-launch::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glow-cyan);
+    transform: translateX(-100%);
+    transition: transform 0.4s ease;
+    z-index: -1;
+  }
+
+  .btn-launch:hover::before { transform: translateX(0); }
+  .btn-launch:hover {
+    color: var(--black);
+    box-shadow: 0 0 30px rgba(0,255,224,0.5);
+  }
+
+  .btn-launch:active { transform: scale(0.98); }
+  .btn-launch:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-launch:disabled::before { display: none; }
+
+  /* LOADING */
+  .loading {
+    display: none;
+    text-align: center;
+    padding: 40px;
+  }
+
+  .loading.show { display: block; }
+
+  .time-travel-anim {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--border);
+    border-top-color: var(--glow-cyan);
+    border-right-color: var(--glow-purple);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--glow-cyan);
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* RESULTS */
+  .results { display: none; }
+  .results.show { display: block; }
+
+  /* TIME COMPARISON CARD */
+  .comparison-card {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .time-snapshot {
+    text-align: center;
+    padding: 24px 16px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .time-snapshot.past {
+    background: rgba(191,0,255,0.06);
+    border: 1px solid rgba(191,0,255,0.25);
+  }
+
+  .time-snapshot.present {
+    background: rgba(0,255,224,0.06);
+    border: 1px solid rgba(0,255,224,0.25);
+  }
+
+  .snap-era {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .past .snap-era { color: var(--glow-purple); }
+  .present .snap-era { color: var(--glow-cyan); }
+
+  .snap-date {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  .snap-balance {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .past .snap-balance { color: var(--glow-purple); text-shadow: 0 0 20px rgba(191,0,255,0.5); }
+  .present .snap-balance { color: var(--glow-cyan); text-shadow: 0 0 20px rgba(0,255,224,0.5); }
+
+  .snap-token {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  .arrow-center {
+    text-align: center;
+    font-size: 2rem;
+    color: var(--glow-gold);
+    filter: drop-shadow(0 0 10px rgba(255,215,0,0.5));
+    animation: arrowPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes arrowPulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* GROWTH DISPLAY */
+  .growth-panel {
+    text-align: center;
+    padding: 28px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .growth-panel.positive {
+    background: rgba(0,255,136,0.06);
+    border: 1px solid rgba(0,255,136,0.25);
+  }
+
+  .growth-panel.negative {
+    background: rgba(255,51,102,0.06);
+    border: 1px solid rgba(255,51,102,0.25);
+  }
+
+  .growth-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .growth-value {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 900;
+    line-height: 1;
+    animation: numberReveal 0.8s ease-out both;
+  }
+
+  .positive .growth-value { 
+    color: var(--green);
+    text-shadow: 0 0 30px rgba(0,255,136,0.6);
+  }
+
+  .negative .growth-value { 
+    color: var(--red);
+    text-shadow: 0 0 30px rgba(255,51,102,0.6);
+  }
+
+  @keyframes numberReveal {
+    from { opacity: 0; transform: scale(0.5); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .growth-abs {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    margin-top: 8px;
+  }
+
+  .positive .growth-abs { color: var(--green); }
+  .negative .growth-abs { color: var(--red); }
+
+  /* ANALYTICS GRID */
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--amber);
+  }
+
+  /* TIMELINE BAR */
+  .timeline-section {
+    margin-bottom: 20px;
+  }
+
+  .timeline-header {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--glow-cyan);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .timeline-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .timeline-era {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    min-width: 55px;
+  }
+
+  .timeline-bar {
+    flex: 1;
+    height: 24px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .timeline-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+
+  .timeline-fill.past-fill {
+    background: linear-gradient(90deg, rgba(191,0,255,0.3), rgba(191,0,255,0.6));
+    border-right: 2px solid var(--glow-purple);
+  }
+
+  .timeline-fill.present-fill {
+    background: linear-gradient(90deg, rgba(0,255,224,0.3), rgba(0,255,224,0.6));
+    border-right: 2px solid var(--glow-cyan);
+  }
+
+  .fill-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: white;
+    opacity: 0.9;
+  }
+
+  /* NARRATIVE */
+  .narrative {
+    background: rgba(0,0,0,0.3);
+    border-left: 3px solid var(--glow-cyan);
+    padding: 16px 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.8;
+    color: var(--text);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .narrative span.highlight {
+    color: var(--glow-cyan);
+    font-weight: 700;
+  }
+
+  /* TX HISTORY */
+  .tx-list {
+    list-style: none;
+  }
+
+  .tx-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    animation: fadeInUp 0.4s ease both;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .tx-type { 
+    color: var(--text-dim); 
+    min-width: 90px;
+  }
+
+  .tx-date { color: var(--text-dim); flex: 1; padding: 0 10px; }
+
+  .tx-amount.positive { color: var(--green); }
+  .tx-amount.negative { color: var(--red); }
+
+  /* SHARE BUTTON */
+  .btn-share {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--glow-purple);
+    border-radius: 3px;
+    color: var(--glow-purple);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  .btn-share:hover {
+    background: rgba(191,0,255,0.1);
+    box-shadow: 0 0 20px rgba(191,0,255,0.2);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--panel);
+    border: 1px solid var(--glow-cyan);
+    padding: 12px 24px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--glow-cyan);
+    border-radius: 3px;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10000;
+    box-shadow: 0 0 30px rgba(0,255,224,0.2);
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ERROR */
+  .error-msg {
+    display: none;
+    background: rgba(255,51,102,0.08);
+    border: 1px solid rgba(255,51,102,0.3);
+    border-radius: 3px;
+    padding: 14px 18px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--red);
+    margin-bottom: 16px;
+  }
+
+  .error-msg.show { display: block; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 1px solid var(--border);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+  }
+
+  .footer a {
+    color: var(--glow-cyan);
+    text-decoration: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .comparison-card { grid-template-columns: 1fr; }
+    .arrow-center { transform: rotate(90deg); font-size: 1.5rem; }
+    .input-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-ring">
+      <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="40" cy="40" r="35" stroke="#00ffe0" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.6"/>
+        <circle cx="40" cy="40" r="28" stroke="#bf00ff" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+        <text x="40" y="46" text-anchor="middle" fill="#00ffe0" font-family="Orbitron" font-size="18" font-weight="900">⏳</text>
+      </svg>
+    </div>
+    <h1>TRAC TIME MACHINE</h1>
+    <div class="subtitle">// Historical Wallet Analytics for TRAC Network //</div>
+  </div>
+
+  <!-- INPUT PANEL -->
+  <div class="panel" data-label="[ CONFIGURE TIME JUMP ]">
+    <div class="input-row">
+      <div class="input-group">
+        <label>// Wallet Address</label>
+        <input type="text" id="walletInput" placeholder="bc1p... or trac1..." maxlength="80">
+      </div>
+      <div class="input-group" style="flex: 0 0 160px; min-width: 140px;">
+        <label>// Token</label>
+        <select id="tokenSelect">
+          <option value="TRAC">TRAC</option>
+          <option value="TNK">TNK</option>
+          <option value="PIPE">PIPE</option>
+          <option value="POLS">POLS</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <label>// Select Time Period</label>
+      <div class="time-options">
+        <div class="time-btn" data-months="1">1 MO</div>
+        <div class="time-btn active" data-months="3">3 MO</div>
+        <div class="time-btn" data-months="6">6 MO</div>
+        <div class="time-btn" data-months="12">1 YR</div>
+        <div class="time-btn" data-months="24">2 YR</div>
+      </div>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <button class="btn-launch" id="launchBtn" onclick="launchTimeMachine()">
+      ▶ INITIATE TIME JUMP
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loadingPanel">
+    <div class="time-travel-anim"></div>
+    <div class="loading-text" id="loadingText">TRAVELLING THROUGH TIME...</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="results" id="resultsPanel">
+
+    <!-- TIME COMPARISON -->
+    <div class="panel" data-label="[ TEMPORAL SNAPSHOT ]">
+      <div class="comparison-card">
+        <div class="time-snapshot past">
+          <div class="snap-era">◀ THE PAST</div>
+          <div class="snap-date" id="pastDate">—</div>
+          <div class="snap-balance" id="pastBalance">0</div>
+          <div class="snap-token" id="pastToken">TNK</div>
+        </div>
+        <div class="arrow-center">⟶</div>
+        <div class="time-snapshot present">
+          <div class="snap-era">NOW ▶</div>
+          <div class="snap-date" id="presentDate">—</div>
+          <div class="snap-balance" id="presentBalance">0</div>
+          <div class="snap-token" id="presentToken">TNK</div>
+        </div>
+      </div>
+
+      <!-- GROWTH -->
+      <div class="growth-panel" id="growthPanel">
+        <div class="growth-label">// Portfolio Growth</div>
+        <div class="growth-value" id="growthPercent">+0%</div>
+        <div class="growth-abs" id="growthAbs">+0 TNK over this period</div>
+      </div>
+
+      <!-- NARRATIVE -->
+      <div class="narrative" id="narrativeBox"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="panel" data-label="[ ANALYTICS ]">
+      <div class="analytics-grid">
+        <div class="stat-card">
+          <div class="stat-label">Peak Balance</div>
+          <div class="stat-value" id="statPeak">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Lowest Balance</div>
+          <div class="stat-value" id="statLow">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Txs in Period</div>
+          <div class="stat-value" id="statTx">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Monthly Δ</div>
+          <div class="stat-value" id="statAvg">—</div>
+        </div>
+      </div>
+
+      <div class="timeline-section">
+        <div class="timeline-header">// Balance Comparison (normalized)</div>
+        <div class="timeline-bar-wrap">
+          <div class="timeline-era" id="barPastLabel">PAST</div>
+          <div class="timeline-bar">
+            <div class="timeline-fill past-fill" id="barPast" style="width:0%">
+              <span class="fill-label" id="barPastVal"></span>
+            </div>
+          </div>
+        </div>
+        <div class="timeline-bar-wrap">
+          <div class="timeline-era" style="color: var(--glow-cyan)">NOW</div>
+          <div class="timeline-bar">
+            <div class="timeline-fill present-fill" id="barPresent" style="width:0%">
+              <span class="fill-label" id="barPresentVal"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TX HISTORY -->
+    <div class="panel" data-label="[ TRANSACTION HISTORY ]">
+      <ul class="tx-list" id="txList"></ul>
+    </div>
+
+    <button class="btn-share" onclick="shareResult()">
+      ⟐ SHARE THIS TIME SNAPSHOT
+    </button>
+
+  </div>
+
+  <div class="footer">
+    Built on <a href="https://github.com/Trac-Systems/intercom" target="_blank">TRAC Intercom</a> &nbsp;|&nbsp;
+    TRAC Time Machine v1.0 &nbsp;|&nbsp;
+    <a href="https://github.com/Trac-Systems/awesome-intercom" target="_blank">Awesome Intercom</a>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── STATE ───────────────────────────────────────────────────────────────────
+  let selectedMonths = 3;
+  let currentResult = null;
+
+  // ─── TIME BUTTONS ─────────────────────────────────────────────────────────────
+  document.querySelectorAll('.time-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedMonths = parseInt(btn.dataset.months);
+    });
+  });
+
+  // ─── LOADING MESSAGES ─────────────────────────────────────────────────────────
+  const loadingMessages = [
+    'SPINNING UP FLUX CAPACITOR...',
+    'QUERYING TRAC LEDGER...',
+    'REWINDING BLOCKCHAIN...',
+    'CALCULATING TEMPORAL DELTA...',
+    'SYNCHRONIZING TIME CRYSTALS...',
+    'FETCHING HISTORICAL STATE...',
+    'ALMOST THERE...'
+  ];
+
+  let loadingInterval;
+  function startLoadingAnimation() {
+    let i = 0;
+    const el = document.getElementById('loadingText');
+    el.textContent = loadingMessages[0];
+    loadingInterval = setInterval(() => {
+      i = (i + 1) % loadingMessages.length;
+      el.textContent = loadingMessages[i];
+    }, 900);
+  }
+
+  function stopLoadingAnimation() {
+    clearInterval(loadingInterval);
+  }
+
+  // ─── SIMULATE TRAC API DATA ───────────────────────────────────────────────────
+  // In production: replace with real Trac Intercom API calls
+  function simulateTracData(wallet, token, months) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        // Simulate realistic wallet data
+        const now = Date.now();
+        const pastDate = new Date(now - months * 30 * 24 * 3600 * 1000);
+        const nowDate = new Date(now);
+
+        // Random but plausible balances
+        const seed = wallet.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+        const rng = (min, max) => {
+          const x = Math.sin(seed * 9301 + 49297) * 233280;
+          return min + ((x - Math.floor(x)) * (max - min));
+        };
+
+        const pastBal = Math.round(rng(500, 5000) * 10) / 10;
+        const growthFactor = rng(0.6, 2.5);
+        const nowBal = Math.round(pastBal * growthFactor * 10) / 10;
+
+        const txCount = Math.floor(rng(8, 45));
+        const peak = Math.round(Math.max(pastBal, nowBal) * rng(1.05, 1.3) * 10) / 10;
+        const low = Math.round(Math.min(pastBal, nowBal) * rng(0.7, 0.99) * 10) / 10;
+
+        // Generate fake transactions
+        const txTypes = ['RECEIVE', 'SEND', 'SWAP', 'STAKE', 'UNSTAKE', 'CLAIM'];
+        const txs = [];
+        for (let i = 0; i < Math.min(txCount, 8); i++) {
+          const daysAgo = Math.floor(rng(1, months * 30));
+          const d = new Date(now - daysAgo * 24 * 3600 * 1000);
+          const type = txTypes[Math.floor(rng(0, txTypes.length))];
+          const amount = Math.round(rng(10, 300) * 10) / 10;
+          const isIn = ['RECEIVE', 'STAKE', 'CLAIM'].includes(type);
+          txs.push({
+            type,
+            date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }),
+            amount,
+            direction: isIn ? 'positive' : 'negative'
+          });
+        }
+        txs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        resolve({
+          wallet,
+          token,
+          months,
+          pastDate: pastDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          nowDate: nowDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          pastBalance: pastBal,
+          nowBalance: nowBal,
+          peak,
+          low,
+          txCount,
+          txs,
+          avgMonthly: Math.round((nowBal - pastBal) / months * 10) / 10
+        });
+      }, 2200 + Math.random() * 800);
+    });
+  }
+
+  // ─── GENERATE NARRATIVE ───────────────────────────────────────────────────────
+  function generateNarrative(data) {
+    const diff = data.nowBalance - data.pastBalance;
+    const pct = ((diff / data.pastBalance) * 100).toFixed(1);
+    const isPositive = diff > 0;
+    const token = data.token;
+    const monthLabel = data.months === 1 ? '1 month' : `${data.months} months`;
+
+    const positiveNarratives = [
+      `Over the past <span class="highlight">${monthLabel}</span>, this wallet grew by <span class="highlight">${pct}%</span>. From <span class="highlight">${data.pastBalance} ${token}</span> to <span class="highlight">${data.nowBalance} ${token}</span> — a gain of <span class="highlight">+${Math.abs(diff).toFixed(1)} ${token}</span>. Peak holding reached <span class="highlight">${data.peak} ${token}</span> during this window. Strong accumulation pattern detected.`,
+      `The time machine reveals impressive growth. Starting at <span class="highlight">${data.pastBalance} ${token}</span>, this wallet stacked gains through <span class="highlight">${data.txCount} transactions</span> to reach <span class="highlight">${data.nowBalance} ${token}</span> today — a <span class="highlight">+${pct}%</span> jump in just ${monthLabel}.`
+    ];
+
+    const negativeNarratives = [
+      `A rough <span class="highlight">${monthLabel}</span> for this wallet. Balance dropped from <span class="highlight">${data.pastBalance} ${token}</span> to <span class="highlight">${data.nowBalance} ${token}</span> — a decrease of <span class="highlight">${pct}%</span> (${Math.abs(diff).toFixed(1)} ${token}). The low point was <span class="highlight">${data.low} ${token}</span>. Could be distribution, staking deployment, or market activity.`,
+    ];
+
+    const narratives = isPositive ? positiveNarratives : negativeNarratives;
+    return narratives[Math.floor(Math.random() * narratives.length)];
+  }
+
+  // ─── FORMAT NUMBER ────────────────────────────────────────────────────────────
+  function fmt(n) {
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toLocaleString();
+  }
+
+  // ─── MAIN FUNCTION ────────────────────────────────────────────────────────────
+  async function launchTimeMachine() {
+    const wallet = document.getElementById('walletInput').value.trim();
+    const token = document.getElementById('tokenSelect').value;
+    const errEl = document.getElementById('errorMsg');
+
+    errEl.className = 'error-msg';
+
+    if (!wallet || wallet.length < 8) {
+      errEl.textContent = '⚠ Please enter a valid wallet address to begin the time jump.';
+      errEl.className = 'error-msg show';
+      return;
+    }
+
+    // UI states
+    document.getElementById('launchBtn').disabled = true;
+    document.getElementById('resultsPanel').className = 'results';
+    document.getElementById('loadingPanel').className = 'loading show';
+    startLoadingAnimation();
+
+    try {
+      const data = await simulateTracData(wallet, token, selectedMonths);
+      currentResult = data;
+
+      stopLoadingAnimation();
+      document.getElementById('loadingPanel').className = 'loading';
+
+      // Fill results
+      const diff = data.nowBalance - data.pastBalance;
+      const pct = ((diff / data.pastBalance) * 100).toFixed(1);
+      const isPositive = diff >= 0;
+
+      document.getElementById('pastDate').textContent = data.pastDate;
+      document.getElementById('presentDate').textContent = data.nowDate;
+      document.getElementById('pastBalance').textContent = fmt(data.pastBalance);
+      document.getElementById('presentBalance').textContent = fmt(data.nowBalance);
+      document.getElementById('pastToken').textContent = data.token;
+      document.getElementById('presentToken').textContent = data.token;
+
+      // Growth
+      const growthPanel = document.getElementById('growthPanel');
+      const growthPct = document.getElementById('growthPercent');
+      const growthAbs = document.getElementById('growthAbs');
+      growthPanel.className = `growth-panel ${isPositive ? 'positive' : 'negative'}`;
+      growthPct.textContent = `${isPositive ? '+' : ''}${pct}%`;
+      growthAbs.textContent = `${isPositive ? '+' : ''}${diff.toFixed(1)} ${data.token} over ${data.months} month${data.months > 1 ? 's' : ''}`;
+
+      // Narrative
+      document.getElementById('narrativeBox').innerHTML = generateNarrative(data);
+
+      // Stats
+      document.getElementById('statPeak').textContent = fmt(data.peak) + ' ' + data.token;
+      document.getElementById('statLow').textContent = fmt(data.low) + ' ' + data.token;
+      document.getElementById('statTx').textContent = data.txCount;
+      const avgSign = data.avgMonthly >= 0 ? '+' : '';
+      document.getElementById('statAvg').textContent = avgSign + fmt(Math.abs(data.avgMonthly)) + ' ' + data.token;
+
+      // Timeline bars
+      const maxBal = Math.max(data.pastBalance, data.nowBalance);
+      const pastPct = Math.round((data.pastBalance / maxBal) * 92);
+      const presentPct = Math.round((data.nowBalance / maxBal) * 92);
+
+      const barPastLabel = data.pastDate.split(',')[0];
+      document.getElementById('barPastLabel').textContent = barPastLabel;
+
+      // Animate bars after a tick
+      setTimeout(() => {
+        document.getElementById('barPast').style.width = pastPct + '%';
+        document.getElementById('barPastVal').textContent = fmt(data.pastBalance);
+        document.getElementById('barPresent').style.width = presentPct + '%';
+        document.getElementById('barPresentVal').textContent = fmt(data.nowBalance);
+      }, 100);
+
+      // TX list
+      const txList = document.getElementById('txList');
+      txList.innerHTML = data.txs.map((tx, i) => `
+        <li class="tx-item" style="animation-delay: ${i * 0.06}s">
+          <span class="tx-type">${tx.type}</span>
+          <span class="tx-date">${tx.date}</span>
+          <span class="tx-amount ${tx.direction}">${tx.direction === 'positive' ? '+' : '-'}${tx.amount} ${data.token}</span>
+        </li>
+      `).join('');
+
+      document.getElementById('resultsPanel').className = 'results show';
+
+    } catch (e) {
+      stopLoadingAnimation();
+      document.getElementById('loadingPanel').className = 'loading';
+      errEl.textContent = '⚠ Time jump failed. Check your wallet address and try again.';
+      errEl.className = 'error-msg show';
+    }
+
+    document.getElementById('launchBtn').disabled = false;
+  }
+
+  // ─── SHARE ────────────────────────────────────────────────────────────────────
+  function shareResult() {
+    if (!currentResult) return;
+    const d = currentResult;
+    const diff = d.nowBalance - d.pastBalance;
+    const pct = ((diff / d.pastBalance) * 100).toFixed(1);
+    const text = `⏳ TRAC Time Machine\n\n📅 ${d.months} months ago: ${d.pastBalance} ${d.token}\n📅 Now: ${d.nowBalance} ${d.token}\n📈 Growth: ${diff >= 0 ? '+' : ''}${pct}%\n\nCheck your wallet: https://github.com/Trac-Systems/awesome-intercom`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      showToast('⟐ Time snapshot copied to clipboard!');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ─── ENTER KEY ────────────────────────────────────────────────────────────────
+  document.getElementById('walletInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') launchTimeMachine();
+  });
+</script>
+</body>
+</html>
