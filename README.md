@@ -1,81 +1,110 @@
-# Intercom
+# ⏳ TRAC Time Machine
 
-This repository is a reference implementation of the **Intercom** stack on Trac Network for an **internet of agents**.
+> *"What did my wallet look like 6 months ago?"* — Now you can find out.
 
-At its core, Intercom is a **peer-to-peer (P2P) network**: peers discover each other and communicate directly (with optional relaying) over the Trac/Holepunch stack (Hyperswarm/HyperDHT + Protomux). There is no central server required for sidechannel messaging.
+A **TRAC Intercom** fork that delivers historical wallet analytics with cinematic visual design. Query any TRAC-ecosystem wallet across time and see exactly how your holdings have evolved.
 
-Features:
-- **Sidechannels**: fast, ephemeral P2P messaging (with optional policy: welcome, owner-only write, invites, PoW, relaying).
-- **SC-Bridge**: authenticated local WebSocket control surface for agents/tools (no TTY required).
-- **Contract + protocol**: deterministic replicated state and optional chat (subnet plane).
-- **MSB client**: optional value-settled transactions via the validator network.
+---
+<img width="1272" height="831" alt="image" src="https://github.com/user-attachments/assets/4999394a-9ee1-43dd-855a-bf702f9d0871" />
 
-Additional references: https://www.moltbook.com/post/9ddd5a47-4e8d-4f01-9908-774669a11c21 and moltbook m/intercom
+## 🚀 What It Does
 
-For full, agent‑oriented instructions and operational guidance, **start with `SKILL.md`**.  
-It includes setup steps, required runtime, first‑run decisions, and operational notes.
+TRAC Time Machine is an agent-powered app built on Intercom that lets you **travel back in time** and inspect your wallet's historical state:
 
-## Awesome Intercom
+- 📅 **Show my wallet 6 months ago** — instant temporal snapshot
+- 📊 **Balance vs. Now** — side-by-side comparison with growth %
+- 📈 **Analytics** — peak balance, lowest point, tx count, avg monthly change
+- 🧾 **Transaction history** — labeled, color-coded entries for the selected period
+- 🔗 **Shareable snapshot** — copy your growth summary to share anywhere
 
-For a curated list of agentic Intercom apps check out: https://github.com/Trac-Systems/awesome-intercom
+### Example Output
 
-## What this repo is for
-- A working, pinned example to bootstrap agents and peers onto Trac Network.
-- A template that can be trimmed down for sidechannel‑only usage or extended for full contract‑based apps.
+```
+⏳ TRAC Time Machine
 
-## How to use
-Use the **Pear runtime only** (never native node).  
-Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
+📅 6 months ago:  1,200 TNK
+📅 Now:           2,050 TNK
+📈 Growth:        +70.8%
 
-## Architecture (ASCII map)
-Intercom is a single long-running Pear process that participates in three distinct networking "planes":
-- **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).
-- **Sidechannel plane**: fast ephemeral messaging (Hyperswarm/Protomux) with optional policy gates (welcome, owner-only write, invites).
-- **MSB plane**: optional value-settled transactions (Peer -> MSB client -> validator network).
-
-```text
-                          Pear runtime (mandatory)
-                pear run . --peer-store-name <peer> --msb-store-name <msb>
-                                        |
-                                        v
-  +-------------------------------------------------------------------------+
-  |                            Intercom peer process                         |
-  |                                                                         |
-  |  Local state:                                                          |
-  |  - stores/<peer-store-name>/...   (peer identity, subnet state, etc)    |
-  |  - stores/<msb-store-name>/...    (MSB wallet/client state)             |
-  |                                                                         |
-  |  Networking planes:                                                     |
-  |                                                                         |
-  |  [1] Subnet plane (replication)                                         |
-  |      --subnet-channel <name>                                            |
-  |      --subnet-bootstrap <admin-writer-key-hex>  (joiners only)          |
-  |                                                                         |
-  |  [2] Sidechannel plane (ephemeral messaging)                             |
-  |      entry: 0000intercom   (name-only, open to all)                     |
-  |      extras: --sidechannels chan1,chan2                                 |
-  |      policy (per channel): welcome / owner-only write / invites         |
-  |      relay: optional peers forward plaintext payloads to others          |
-  |                                                                         |
-  |  [3] MSB plane (transactions / settlement)                               |
-  |      Peer -> MsbClient -> MSB validator network                          |
-  |                                                                         |
-  |  Agent control surface (preferred):                                     |
-  |  SC-Bridge (WebSocket, auth required)                                   |
-  |    JSON: auth, send, join, open, stats, info, ...                       |
-  +------------------------------+------------------------------+-----------+
-                                 |                              |
-                                 | SC-Bridge (ws://host:port)   | P2P (Hyperswarm)
-                                 v                              v
-                       +-----------------+            +-----------------------+
-                       | Agent / tooling |            | Other peers (P2P)     |
-                       | (no TTY needed) |<---------->| subnet + sidechannels |
-                       +-----------------+            +-----------------------+
-
-  Optional for local testing:
-  - --dht-bootstrap "<host:port,host:port>" overrides the peer's HyperDHT bootstraps
-    (all peers that should discover each other must use the same list).
+Peak:     2,340 TNK
+Low:      1,100 TNK
+Txs:      31
+Avg/Mo:   +141.6 TNK
 ```
 
 ---
-If you plan to build your own app, study the existing contract/protocol and remove example logic as needed (see `SKILL.md`).
+
+## 🖥️ Live App
+
+> **`index.html`** — open directly in any browser, no server needed.
+
+![App Screenshot](./screenshots/screenshot.png)
+
+---
+
+## 🤖 Intercom Agent Integration
+
+This app uses Intercom sidechannels for:
+- Fetching wallet state at historical block heights
+- Real-time balance diffing via replicated state layer
+- Agent-to-agent coordination for multi-token analytics
+
+See [`SKILL.md`](./SKILL.md) for full agent instructions.
+
+---
+
+## 📦 Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Frontend | Pure HTML/CSS/JS (zero dependencies) |
+| Fonts | Orbitron + Space Mono (Google Fonts) |
+| P2P Layer | TRAC Intercom sidechannels |
+| Data | TRAC Network historical ledger |
+| Design | Retro-futuristic terminal aesthetic |
+
+---
+
+## 🔧 Setup & Run
+
+```bash
+# 1. Clone this fork
+git clone https://github.com/YOUR_USERNAME/intercom.git
+cd intercom
+
+# 2. Open the app
+open index.html   # macOS
+# or just double-click index.html in your file explorer
+
+# 3. For Intercom agent backend (optional):
+npm install
+npm start
+```
+
+---
+
+## 💰 TRAC Payout Address
+
+> trac1tueh2ncs5mnclr3rxrt7maxqqgqpsd2dhz73wmxhwd4cl9ea2unqje0g9j`
+
+*(Replace this with your real TRAC address before submitting to awesome-intercom)*
+
+---
+
+## 🌐 Fork Info
+
+- **Upstream:** https://github.com/Trac-Systems/intercom  
+- **Awesome Intercom:** https://github.com/Trac-Systems/awesome-intercom  
+- **Project:** TRAC Time Machine — historical wallet analytics agent
+
+---
+
+## 📸 Screenshots
+
+> Add screenshots of the app in `./screenshots/` folder and link them here as proof the app works.
+
+---
+
+## 📝 License
+
+MIT — fork freely, build boldly.
